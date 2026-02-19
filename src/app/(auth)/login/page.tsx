@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signInWithEmail, signInWithOAuth } from "@/lib/auth";
+import NALogo from "@/components/common/NALogo";
 
 function LoginContent() {
   const router = useRouter();
@@ -59,7 +60,9 @@ function LoginContent() {
       <div className="w-full max-w-sm">
         {/* 로고/타이틀 */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🙏</div>
+          <div className="flex justify-center mb-3">
+            <NALogo size={80} />
+          </div>
           <h1 className="text-2xl font-bold text-amber-900">감사일기</h1>
           <p className="text-amber-700 mt-1 text-sm">
             매일 감사를 기록하는 습관
