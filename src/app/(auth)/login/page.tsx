@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signInWithEmail, signInWithOAuth } from "@/lib/auth";
 import NALogo from "@/components/common/NALogo";
 
 function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/journal";
   const error = searchParams.get("error");
@@ -24,8 +23,9 @@ function LoginContent() {
     setLoading(true);
     setErrorMsg("");
 
-    const { error } = await signInWithEmail(email, password);
+    const { data, error } = await signInWithEmail(email, password);
     if (error) {
+      console.log("[DEBUG] Login failed:", error.message);
       setErrorMsg(
         error.message === "Invalid login credentials"
           ? "이메일 또는 비밀번호가 올바르지 않습니다."
@@ -33,7 +33,10 @@ function LoginContent() {
       );
       setLoading(false);
     } else {
-      router.push(redirect);
+      console.log("[DEBUG] Login success, user:", data.user?.email);
+      console.log("[DEBUG] Session exists:", !!data.session);
+      // Full page reload to ensure session is picked up cleanly
+      window.location.href = redirect;
     }
   };
 

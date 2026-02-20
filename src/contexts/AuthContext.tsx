@@ -9,7 +9,6 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import type { User, Session } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
@@ -48,7 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   const supabaseRef = useRef(createClient());
   const mountedRef = useRef(true);
 
@@ -68,10 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, fetchProfile]);
 
   const handleSignOut = useCallback(async () => {
+    console.log("[DEBUG] AuthContext: signOut called");
     try {
       await supabaseRef.current.auth.signOut();
-    } catch {
-      // signOut 실패해도 강제 클린업
+      console.log("[DEBUG] AuthContext: signOut success");
+    } catch (e) {
+      console.log("[DEBUG] AuthContext: signOut failed, forcing cleanup", e);
     }
     if (mountedRef.current) {
       setUser(null);
@@ -79,8 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
     }
     clearAllStorage();
-    router.push("/login");
-  }, [router]);
+    window.location.href = "/login";
+  }, []);
 
   // 1) 초기 세션 복원 + onAuthStateChange
   useEffect(() => {
@@ -89,7 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // 저장된 세션 복원 (새로고침 후에도 유지)
     const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log("[DEBUG] AuthContext: initSession called");
+      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log("[DEBUG] AuthContext: getSession result -", {
+        hasSession: !!session,
+        userEmail: session?.user?.email,
+        error: error?.message,
+      });
       if (!mountedRef.current) return;
 
       setSession(session);
@@ -99,7 +105,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchProfile(session.user.id);
       }
 
-      if (mountedRef.current) setLoading(false);
+      if (mountedRef.current) {
+        console.log("[DEBUG] AuthContext: setLoading(false), user:", session?.user?.email ?? "null");
+        setLoading(false);
+      }
     };
 
     initSession();
@@ -108,10 +117,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[DEBUG] AuthContext: onAuthStateChange -", event, {
+        hasSession: !!session,
+        userEmail: session?.user?.email,
+      });
       if (!mountedRef.current) return;
 
       setSession(session);
       setUser(session?.user ?? null);
+
+      if (event === "INITIAL_SESSION") {
+        // INITIAL_SESSION은 initSession에서 처리하므로 무시
+        return;
+      }
 
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session?.user) {
@@ -119,7 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else if (event === "SIGNED_OUT") {
         setProfile(null);
-        router.push("/login");
       }
     });
 
@@ -127,25 +144,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, router]);
+  }, [fetchProfile]);
 
   // 2) 탭/앱 복귀 시 세션 재확인
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState !== "visible") return;
 
+      console.log("[DEBUG] AuthContext: tab became visible, checking session");
       const supabase = supabaseRef.current;
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!mountedRef.current) return;
 
       if (!session) {
-        // 세션 만료 → 로그인 페이지로
+        console.log("[DEBUG] AuthContext: no session on tab return, redirecting");
         setUser(null);
         setProfile(null);
         setSession(null);
-        router.push("/login");
+        window.location.href = "/login";
+        return;
       } else {
+        console.log("[DEBUG] AuthContext: session valid on tab return, user:", session.user.email);
         setSession(session);
         setUser(session.user);
       }
@@ -155,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [router]);
+  }, []);
 
   return (
     <AuthContext.Provider

@@ -10,8 +10,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
+  console.log("[DEBUG] AuthGuard render - loading:", loading, "user:", user?.email ?? "null");
+
   useEffect(() => {
     if (!loading && !user) {
+      console.log("[DEBUG] AuthGuard: no user, redirecting to /login");
       router.push("/login");
     }
   }, [loading, user, router]);
