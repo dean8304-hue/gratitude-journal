@@ -25,6 +25,7 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // getUser()가 세션 토큰을 검증하고 필요 시 갱신해서 쿠키에 다시 저장
   const {
     data: { user },
   } = await supabase.auth.getUser();

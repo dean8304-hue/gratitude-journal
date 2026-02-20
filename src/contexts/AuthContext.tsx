@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -48,66 +49,113 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const mountedRef = useRef(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
+  const fetchProfile = useCallback(async (userId: string) => {
+    const { data } = await supabaseRef.current
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
-    setProfile(data);
-  };
+    if (mountedRef.current) setProfile(data);
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     if (user) {
       await fetchProfile(user.id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, fetchProfile]);
 
   const handleSignOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      await supabaseRef.current.auth.signOut();
     } catch {
       // signOut 실패해도 강제 클린업
     }
-    setUser(null);
-    setProfile(null);
-    setSession(null);
+    if (mountedRef.current) {
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+    }
     clearAllStorage();
     router.push("/login");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
+  // 1) 초기 세션 복원 + onAuthStateChange
   useEffect(() => {
-    // 1) 초기 세션 확인
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
+    mountedRef.current = true;
+    const supabase = supabaseRef.current;
 
-    // 2) 세션 변경 실시간 감지
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // 저장된 세션 복원 (새로고침 후에도 유지)
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mountedRef.current) return;
+
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
         await fetchProfile(session.user.id);
-      } else {
+      }
+
+      if (mountedRef.current) setLoading(false);
+    };
+
+    initSession();
+
+    // 세션 변경 실시간 감지
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mountedRef.current) return;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        }
+      } else if (event === "SIGNED_OUT") {
         setProfile(null);
+        router.push("/login");
       }
     });
 
-    return () => subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      mountedRef.current = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile, router]);
+
+  // 2) 탭/앱 복귀 시 세션 재확인
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== "visible") return;
+
+      const supabase = supabaseRef.current;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!mountedRef.current) return;
+
+      if (!session) {
+        // 세션 만료 → 로그인 페이지로
+        setUser(null);
+        setProfile(null);
+        setSession(null);
+        router.push("/login");
+      } else {
+        setSession(session);
+        setUser(session.user);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [router]);
 
   return (
     <AuthContext.Provider
