@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -23,10 +23,10 @@ export default function CommentSection({
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
 
-  const fetchComments = async () => {
-    const { data } = await supabase
+  const fetchComments = useCallback(async () => {
+    const { data } = await supabaseRef.current
       .from("comments")
       .select("*, profiles:user_id(nickname, avatar_url)")
       .eq("entry_id", entryId)
@@ -36,10 +36,25 @@ export default function CommentSection({
       (data as unknown as CommentWithProfile[]) || []
     );
     setLoading(false);
-  };
+  }, [entryId]);
 
   useEffect(() => {
-    fetchComments();
+    let cancelled = false;
+
+    (async () => {
+      const { data } = await supabaseRef.current
+        .from("comments")
+        .select("*, profiles:user_id(nickname, avatar_url)")
+        .eq("entry_id", entryId)
+        .order("created_at");
+
+      if (!cancelled) {
+        setComments((data as unknown as CommentWithProfile[]) || []);
+        setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [entryId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,7 +62,7 @@ export default function CommentSection({
     if (!newComment.trim() || !currentUserId || submitting) return;
 
     setSubmitting(true);
-    await supabase.from("comments").insert({
+    await supabaseRef.current.from("comments").insert({
       user_id: currentUserId,
       entry_id: entryId,
       content: newComment.trim(),
@@ -59,7 +74,7 @@ export default function CommentSection({
   };
 
   const handleDelete = async (commentId: string) => {
-    await supabase.from("comments").delete().eq("id", commentId);
+    await supabaseRef.current.from("comments").delete().eq("id", commentId);
     await fetchComments();
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import type { GratitudeEntry } from "@/types/database";
 import { format } from "date-fns";
@@ -8,13 +8,13 @@ import { format } from "date-fns";
 export function useGratitudeEntries(userId: string | undefined, date: Date) {
   const [entries, setEntries] = useState<GratitudeEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
   const dateStr = format(date, "yyyy-MM-dd");
 
   const fetchEntries = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await supabaseRef.current
       .from("gratitude_entries")
       .select("*")
       .eq("user_id", userId)
@@ -25,36 +25,29 @@ export function useGratitudeEntries(userId: string | undefined, date: Date) {
   }, [userId, dateStr]);
 
   useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries]);
+    let cancelled = false;
 
-  // 실시간 구독
-  useEffect(() => {
+    (async () => {
+      if (!userId) return;
+      setLoading(true);
+      const { data } = await supabaseRef.current
+        .from("gratitude_entries")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("date", dateStr)
+        .order("order_index");
+      if (!cancelled) {
+        setEntries(data || []);
+        setLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [userId, dateStr]);
+
+  const addEntry = useCallback(async (discovery: string, reason: string) => {
     if (!userId) return;
-    const channel = supabase
-      .channel(`gratitude-${userId}-${dateStr}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "gratitude_entries",
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          fetchEntries();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, dateStr, fetchEntries]);
-
-  const addEntry = async (discovery: string, reason: string) => {
-    if (!userId) return;
-    const { error } = await supabase.from("gratitude_entries").insert({
+    const { error } = await supabaseRef.current.from("gratitude_entries").insert({
       user_id: userId,
       date: dateStr,
       discovery,
@@ -63,38 +56,34 @@ export function useGratitudeEntries(userId: string | undefined, date: Date) {
     });
     if (!error) await fetchEntries();
     return error;
-  };
+  }, [userId, dateStr, entries.length, fetchEntries]);
 
-  const updateEntry = async (
-    id: string,
-    discovery: string,
-    reason: string
-  ) => {
-    const { error } = await supabase
+  const updateEntry = useCallback(async (id: string, discovery: string, reason: string) => {
+    const { error } = await supabaseRef.current
       .from("gratitude_entries")
       .update({ discovery, reason })
       .eq("id", id);
     if (!error) await fetchEntries();
     return error;
-  };
+  }, [fetchEntries]);
 
-  const deleteEntry = async (id: string) => {
-    const { error } = await supabase
+  const deleteEntry = useCallback(async (id: string) => {
+    const { error } = await supabaseRef.current
       .from("gratitude_entries")
       .delete()
       .eq("id", id);
     if (!error) await fetchEntries();
     return error;
-  };
+  }, [fetchEntries]);
 
-  const togglePublic = async (id: string, isPublic: boolean) => {
-    const { error } = await supabase
+  const togglePublic = useCallback(async (id: string, isPublic: boolean) => {
+    const { error } = await supabaseRef.current
       .from("gratitude_entries")
       .update({ is_public: isPublic })
       .eq("id", id);
     if (!error) await fetchEntries();
     return error;
-  };
+  }, [fetchEntries]);
 
   return { entries, loading, addEntry, updateEntry, deleteEntry, togglePublic };
 }

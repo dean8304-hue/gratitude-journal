@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 import type { MeditationReflection } from "@/types/database";
 import { format } from "date-fns";
@@ -23,6 +23,24 @@ export interface SavePayload {
   memo?: string;
 }
 
+const MEDITATION_CACHE_KEY = "meditation-cache";
+
+function getCachedMeditation(dateStr: string): MeditationData | null {
+  try {
+    const raw = sessionStorage.getItem(MEDITATION_CACHE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as MeditationData;
+    if (data.date === dateStr) return data;
+  } catch {}
+  return null;
+}
+
+function setCachedMeditation(data: MeditationData) {
+  try {
+    sessionStorage.setItem(MEDITATION_CACHE_KEY, JSON.stringify(data));
+  } catch {}
+}
+
 export function useMeditation(userId: string | undefined) {
   const [meditation, setMeditation] = useState<MeditationData | null>(null);
   const [savedReflection, setSavedReflection] =
@@ -30,48 +48,62 @@ export function useMeditation(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const supabase = createClient();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const supabaseRef = useRef(createClient());
+  const today = useMemo(() => format(new Date(), "yyyy-MM-dd"), []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchAll = async () => {
       setLoading(true);
       setError(false);
 
-      // 명상 API 호출과 Supabase 조회를 병렬로 실행
-      const meditationPromise = fetch("/api/meditation")
-        .then((res) => {
-          if (!res.ok) throw new Error("fetch failed");
-          return res.json();
-        })
-        .then((data) => {
-          if (data.error) throw new Error(data.error);
-          setMeditation(data);
-        })
-        .catch(() => setError(true));
+      // 클라이언트 캐시 확인
+      const cached = getCachedMeditation(today);
+
+      const meditationPromise = cached
+        ? Promise.resolve().then(() => {
+            if (!cancelled) setMeditation(cached);
+          })
+        : fetch("/api/meditation")
+            .then((res) => {
+              if (!res.ok) throw new Error("fetch failed");
+              return res.json();
+            })
+            .then((data) => {
+              if (data.error) throw new Error(data.error);
+              if (!cancelled) {
+                setMeditation(data);
+                setCachedMeditation(data);
+              }
+            })
+            .catch(() => {
+              if (!cancelled) setError(true);
+            });
 
       const reflectionPromise = userId
         ? (async () => {
             try {
-              const { data } = await supabase
+              const { data } = await supabaseRef.current
                 .from("meditation_reflections")
                 .select("*")
                 .eq("user_id", userId)
                 .eq("date", today)
                 .single();
-              setSavedReflection(data);
+              if (!cancelled) setSavedReflection(data);
             } catch {}
           })()
         : Promise.resolve();
 
       await Promise.all([meditationPromise, reflectionPromise]);
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     };
 
     fetchAll();
+    return () => { cancelled = true; };
   }, [userId, today]);
 
-  const saveReflection = async (payload: SavePayload) => {
+  const saveReflection = useCallback(async (payload: SavePayload) => {
     if (!userId || !meditation) return;
 
     const record = {
@@ -85,7 +117,7 @@ export function useMeditation(userId: string | undefined) {
     };
 
     if (savedReflection) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseRef.current
         .from("meditation_reflections")
         .update(record)
         .eq("id", savedReflection.id)
@@ -94,7 +126,7 @@ export function useMeditation(userId: string | undefined) {
       if (!error && data) setSavedReflection(data);
       return error;
     } else {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseRef.current
         .from("meditation_reflections")
         .insert(record)
         .select()
@@ -102,7 +134,7 @@ export function useMeditation(userId: string | undefined) {
       if (!error && data) setSavedReflection(data);
       return error;
     }
-  };
+  }, [userId, today, meditation, savedReflection]);
 
   return { meditation, savedReflection, loading, error, saveReflection };
 }

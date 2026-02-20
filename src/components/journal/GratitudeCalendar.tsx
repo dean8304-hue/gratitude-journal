@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   format,
   startOfMonth,
@@ -29,19 +29,23 @@ export default function GratitudeCalendar({
 }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedDate));
   const [entryCounts, setEntryCounts] = useState<Record<string, number>>({});
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchMonthData = async () => {
       const start = format(startOfMonth(currentMonth), "yyyy-MM-dd");
       const end = format(endOfMonth(currentMonth), "yyyy-MM-dd");
 
-      const { data } = await supabase
+      const { data } = await supabaseRef.current
         .from("gratitude_entries")
         .select("date")
         .eq("user_id", userId)
         .gte("date", start)
         .lte("date", end);
+
+      if (cancelled) return;
 
       const counts: Record<string, number> = {};
       data?.forEach((entry) => {
@@ -51,6 +55,7 @@ export default function GratitudeCalendar({
     };
 
     fetchMonthData();
+    return () => { cancelled = true; };
   }, [userId, currentMonth]);
 
   const weekDays = ["일", "월", "화", "수", "목", "금", "토"];

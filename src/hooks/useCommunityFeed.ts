@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import type { GratitudeEntry, Profile, ReactionType } from "@/types/database";
 
@@ -14,12 +14,18 @@ export interface FeedEntry extends GratitudeEntry {
 export function useCommunityFeed(userId: string | undefined) {
   const [entries, setEntries] = useState<FeedEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const fetchFeed = useCallback(async () => {
     setLoading(true);
+    const supabase = supabaseRef.current;
 
-    // 공개 감사 항목 + 프로필 정보
     const { data: rawEntries } = await supabase
       .from("gratitude_entries")
       .select("*, profiles:user_id(nickname, avatar_url)")
@@ -27,33 +33,27 @@ export function useCommunityFeed(userId: string | undefined) {
       .order("created_at", { ascending: false })
       .limit(50);
 
+    if (!mountedRef.current) return;
+
     if (!rawEntries) {
       setEntries([]);
       setLoading(false);
       return;
     }
 
-    // 리액션 수 집계
     const entryIds = rawEntries.map((e) => e.id);
 
-    const { data: reactions } = await supabase
-      .from("reactions")
-      .select("entry_id, type, user_id")
-      .in("entry_id", entryIds);
+    const [{ data: reactions }, { data: comments }] = await Promise.all([
+      supabase.from("reactions").select("entry_id, type, user_id").in("entry_id", entryIds),
+      supabase.from("comments").select("entry_id").in("entry_id", entryIds),
+    ]);
 
-    // 댓글 수 집계
-    const { data: comments } = await supabase
-      .from("comments")
-      .select("entry_id")
-      .in("entry_id", entryIds);
+    if (!mountedRef.current) return;
 
     const feedEntries: FeedEntry[] = rawEntries.map((entry) => {
       const entryReactions = reactions?.filter((r) => r.entry_id === entry.id) || [];
       const reactionCounts: Record<ReactionType, number> = {
-        like: 0,
-        cheer: 0,
-        pray: 0,
-        heart: 0,
+        like: 0, cheer: 0, pray: 0, heart: 0,
       };
       const myReactions: ReactionType[] = [];
 
@@ -83,28 +83,37 @@ export function useCommunityFeed(userId: string | undefined) {
     fetchFeed();
   }, [fetchFeed]);
 
-  const toggleReaction = async (entryId: string, type: ReactionType) => {
+  const toggleReaction = useCallback(async (entryId: string, type: ReactionType) => {
     if (!userId) return;
+    const supabase = supabaseRef.current;
 
-    const existing = entries
-      .find((e) => e.id === entryId)
-      ?.my_reactions.includes(type);
+    // 낙관적 UI 업데이트
+    setEntries((prev) =>
+      prev.map((e) => {
+        if (e.id !== entryId) return e;
+        const has = e.my_reactions.includes(type);
+        return {
+          ...e,
+          my_reactions: has
+            ? e.my_reactions.filter((r) => r !== type)
+            : [...e.my_reactions, type],
+          reaction_counts: {
+            ...e.reaction_counts,
+            [type]: e.reaction_counts[type] + (has ? -1 : 1),
+          },
+        };
+      })
+    );
+
+    const existing = entries.find((e) => e.id === entryId)?.my_reactions.includes(type);
 
     if (existing) {
-      await supabase
-        .from("reactions")
-        .delete()
-        .eq("user_id", userId)
-        .eq("entry_id", entryId)
-        .eq("type", type);
+      await supabase.from("reactions").delete()
+        .eq("user_id", userId).eq("entry_id", entryId).eq("type", type);
     } else {
-      await supabase
-        .from("reactions")
-        .insert({ user_id: userId, entry_id: entryId, type });
+      await supabase.from("reactions").insert({ user_id: userId, entry_id: entryId, type });
     }
-
-    await fetchFeed();
-  };
+  }, [userId, entries]);
 
   return { entries, loading, toggleReaction, refreshFeed: fetchFeed };
 }
