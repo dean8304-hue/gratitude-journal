@@ -1,9 +1,8 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase-middleware";
 
-export function middleware(request: NextRequest) {
-  // 인증은 클라이언트 사이드(AuthContext)에서 처리
-  console.log("[DEBUG] Middleware: pass-through for", request.nextUrl.pathname);
-  return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  return await updateSession(request);
 }
 
 export const config = {
