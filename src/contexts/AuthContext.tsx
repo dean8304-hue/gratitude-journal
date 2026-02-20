@@ -82,38 +82,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = "/login";
   }, []);
 
-  // 1) 초기 세션 복원 + onAuthStateChange
+  // 1) 세션 초기화: getSession + onAuthStateChange 이중 안전장치
   useEffect(() => {
     mountedRef.current = true;
     const supabase = supabaseRef.current;
+    let loadingResolved = false;
 
-    // 저장된 세션 복원 (새로고침 후에도 유지)
-    const initSession = async () => {
-      console.log("[DEBUG] AuthContext: initSession called");
-      const { data: { session }, error } = await supabase.auth.getSession();
+    const resolveLoading = () => {
+      if (!loadingResolved && mountedRef.current) {
+        loadingResolved = true;
+        console.log("[DEBUG] AuthContext: setLoading(false)");
+        setLoading(false);
+      }
+    };
+
+    // 방법1: getSession으로 즉시 세션 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
       console.log("[DEBUG] AuthContext: getSession result -", {
         hasSession: !!session,
         userEmail: session?.user?.email,
-        error: error?.message,
       });
       if (!mountedRef.current) return;
 
       setSession(session);
       setUser(session?.user ?? null);
 
+      // 프로필은 백그라운드에서 로딩 (loading 해제를 블로킹하지 않음)
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        fetchProfile(session.user.id).catch(() => {});
       }
 
-      if (mountedRef.current) {
-        console.log("[DEBUG] AuthContext: setLoading(false), user:", session?.user?.email ?? "null");
-        setLoading(false);
-      }
-    };
+      resolveLoading();
+    }).catch(() => {
+      resolveLoading();
+    });
 
-    initSession();
-
-    // 세션 변경 실시간 감지
+    // 방법2: onAuthStateChange로 이후 변경 감지
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -127,22 +131,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (event === "INITIAL_SESSION") {
-        // INITIAL_SESSION은 initSession에서 처리하므로 무시
+        // getSession에서 이미 처리, loading만 확실히 해제
+        if (session?.user) {
+          fetchProfile(session.user.id).catch(() => {});
+        }
+        resolveLoading();
         return;
       }
 
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          fetchProfile(session.user.id).catch(() => {});
         }
       } else if (event === "SIGNED_OUT") {
         setProfile(null);
       }
+
+      resolveLoading();
     });
+
+    // 방법3: 안전장치 - 5초 후에도 loading이면 강제 해제
+    const safetyTimeout = setTimeout(() => {
+      console.log("[DEBUG] AuthContext: safety timeout - forcing loading false");
+      resolveLoading();
+    }, 5000);
 
     return () => {
       mountedRef.current = false;
       subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
     };
   }, [fetchProfile]);
 
