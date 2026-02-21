@@ -3,8 +3,8 @@
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
-import NALogo from "@/components/common/NALogo";
 
 export default function Header() {
   const { profile } = useAuth();
@@ -14,7 +14,7 @@ export default function Header() {
     <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-amber-100 z-40">
       <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
-          <NALogo size={36} />
+          <Image src="/logo.png" alt="감사일기" width={36} height={36} />
           <div>
             <h1 className="text-lg font-bold text-amber-900">감사일기</h1>
             <p className="text-xs text-amber-600">

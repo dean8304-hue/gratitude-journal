@@ -3,8 +3,8 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { signInWithEmail, signInWithOAuth } from "@/lib/auth";
-import NALogo from "@/components/common/NALogo";
 
 function LoginContent() {
   const router = useRouter();
@@ -61,7 +61,13 @@ function LoginContent() {
         {/* 로고/타이틀 */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-3">
-            <NALogo size={80} />
+            <Image
+              src="/logo.png"
+              alt="감사일기 로고"
+              width={80}
+              height={80}
+              priority
+            />
           </div>
           <h1 className="text-2xl font-bold text-amber-900">감사일기</h1>
           <p className="text-amber-700 mt-1 text-sm">

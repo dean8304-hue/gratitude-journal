@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
 import { format, differenceInDays } from "date-fns";
 import { ko } from "date-fns/locale";
+import Image from "next/image";
 import { getMaxGratitudeCount } from "@/utils/gratitude";
 
 export default function SettingsPage() {
@@ -172,9 +173,12 @@ export default function SettingsPage() {
         로그아웃
       </button>
 
-      <p className="text-center text-xs text-amber-400 pb-4">
-        감사일기 v{process.env.NEXT_PUBLIC_APP_VERSION}
-      </p>
+      <div className="flex flex-col items-center gap-2 pb-4">
+        <Image src="/logo.png" alt="감사일기" width={48} height={48} />
+        <p className="text-xs text-amber-400">
+          감사일기 v{process.env.NEXT_PUBLIC_APP_VERSION}
+        </p>
+      </div>
     </div>
   );
 }
