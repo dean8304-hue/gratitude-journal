@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase";
 import { format, differenceInDays } from "date-fns";
@@ -15,6 +15,13 @@ export default function SettingsPage() {
   const [bio, setBio] = useState(profile?.bio || "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (profile) {
+      setNickname(profile.nickname || "");
+      setBio(profile.bio || "");
+    }
+  }, [profile]);
 
   const handleSaveProfile = async () => {
     if (!user || !nickname.trim()) return;
@@ -166,7 +173,7 @@ export default function SettingsPage() {
       </button>
 
       <p className="text-center text-xs text-amber-400 pb-4">
-        감사일기 v1.0
+        감사일기 v{process.env.NEXT_PUBLIC_APP_VERSION}
       </p>
     </div>
   );

@@ -184,6 +184,10 @@ function LoginContent() {
             문제가 있나요? 세션 초기화
           </button>
         </p>
+
+        <p className="text-center mt-3 text-xs text-amber-300">
+          v{process.env.NEXT_PUBLIC_APP_VERSION}
+        </p>
       </div>
     </div>
   );

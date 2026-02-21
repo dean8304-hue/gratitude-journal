@@ -31,6 +31,7 @@ export default function FeedCard({
       <div className="px-4 pt-4 pb-2 flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-sm">
           {entry.profiles?.avatar_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={entry.profiles.avatar_url}
               alt=""

@@ -53,6 +53,7 @@ export default async function SharePage({ params }: Props) {
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               {profile?.avatar_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={profile.avatar_url}
                   alt=""

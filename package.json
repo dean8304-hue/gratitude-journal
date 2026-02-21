@@ -1,12 +1,13 @@
 {
   "name": "gratitude-journal",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "version:patch": "npm version patch --no-git-tag-version"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

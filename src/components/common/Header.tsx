@@ -33,6 +33,7 @@ export default function Header() {
           )}
           <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-sm">
             {profile?.avatar_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={profile.avatar_url}
                 alt=""

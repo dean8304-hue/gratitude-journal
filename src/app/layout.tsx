@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import UpdateBanner from "@/components/common/UpdateBanner";
 
 const pretendard = localFont({
   src: [
@@ -52,6 +53,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className={`${pretendard.variable} font-sans antialiased`}>
+        <UpdateBanner />
         {children}
       </body>
     </html>
