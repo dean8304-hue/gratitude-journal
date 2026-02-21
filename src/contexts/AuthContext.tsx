@@ -40,12 +40,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const mountedRef = useRef(true);
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data } = await supabaseRef.current
+    const supabase = supabaseRef.current;
+    const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
-    if (mountedRef.current) setProfile(data);
+
+    if (data) {
+      if (mountedRef.current) setProfile(data);
+      return;
+    }
+
+    // 프로필이 없으면 자동 생성 (소셜 로그인 사용자)
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+
+    if (!authUser || !mountedRef.current) return;
+
+    const metadata = authUser.user_metadata;
+    const { data: newProfile } = await supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        nickname:
+          metadata.full_name ||
+          metadata.name ||
+          authUser.email?.split("@")[0] ||
+          "사용자",
+        avatar_url: metadata.avatar_url || metadata.picture || null,
+        bio: "",
+      })
+      .select()
+      .single();
+
+    if (mountedRef.current && newProfile) setProfile(newProfile);
   }, []);
 
   const refreshProfile = useCallback(async () => {

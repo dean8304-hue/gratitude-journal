@@ -82,41 +82,6 @@ function LoginContent() {
           </div>
         )}
 
-        {/* 이메일 로그인 폼 */}
-        <form onSubmit={handleEmailLogin} className="space-y-3">
-          <input
-            type="email"
-            placeholder="이메일"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 text-amber-900 placeholder:text-amber-400"
-          />
-          <input
-            type="password"
-            placeholder="비밀번호"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 text-amber-900 placeholder:text-amber-400"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
-          >
-            {loading ? "로그인 중..." : "로그인"}
-          </button>
-        </form>
-
-        {/* 구분선 */}
-        <div className="flex items-center my-5">
-          <div className="flex-1 border-t border-amber-200" />
-          <span className="px-3 text-xs text-amber-400">또는</span>
-          <div className="flex-1 border-t border-amber-200" />
-        </div>
-
         {/* 소셜 로그인 */}
         <div className="space-y-3">
           <button
@@ -158,6 +123,41 @@ function LoginContent() {
             카카오로 계속하기
           </button>
         </div>
+
+        {/* 구분선 */}
+        <div className="flex items-center my-5">
+          <div className="flex-1 border-t border-amber-200" />
+          <span className="px-3 text-xs text-amber-400">또는</span>
+          <div className="flex-1 border-t border-amber-200" />
+        </div>
+
+        {/* 이메일 로그인 폼 */}
+        <form onSubmit={handleEmailLogin} className="space-y-3">
+          <input
+            type="email"
+            placeholder="이메일"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 text-amber-900 placeholder:text-amber-400"
+          />
+          <input
+            type="password"
+            placeholder="비밀번호"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 text-amber-900 placeholder:text-amber-400"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
+          >
+            {loading ? "로그인 중..." : "이메일로 로그인"}
+          </button>
+        </form>
 
         {/* 회원가입 링크 */}
         <p className="text-center mt-6 text-sm text-amber-700">

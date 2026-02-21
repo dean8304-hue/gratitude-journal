@@ -32,6 +32,33 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // 소셜 로그인 사용자 프로필 자동 생성
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .single();
+
+        if (!existingProfile) {
+          const metadata = user.user_metadata;
+          await supabase.from("profiles").insert({
+            id: user.id,
+            nickname:
+              metadata.full_name ||
+              metadata.name ||
+              user.email?.split("@")[0] ||
+              "사용자",
+            avatar_url: metadata.avatar_url || metadata.picture || null,
+            bio: "",
+          });
+        }
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
