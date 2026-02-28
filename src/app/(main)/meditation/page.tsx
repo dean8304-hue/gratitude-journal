@@ -116,20 +116,20 @@ export default function MeditationPage() {
             </a>
           </div>
         ) : (
-          <>
+          <div className="font-serif">
             {/* 제목 */}
-            <h2 className="text-lg font-bold text-amber-900 mt-2 mb-4">
+            <h2 className="text-2xl font-bold text-amber-900 mt-2 mb-6 leading-snug">
               {title}
             </h2>
 
             {/* 인용구 카드 */}
             {quote && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
-                <p className="text-amber-800 text-sm italic leading-relaxed">
+              <div className="border-l-4 border-amber-400 bg-amber-50/70 rounded-r-xl pl-4 pr-4 py-4 mb-6">
+                <p className="text-amber-800 text-lg italic leading-[1.9]">
                   {quote}
                 </p>
                 {source && (
-                  <p className="text-amber-500 text-xs mt-2 text-right">
+                  <p className="text-amber-500 text-sm mt-3 text-right">
                     — {source}
                   </p>
                 )}
@@ -138,22 +138,22 @@ export default function MeditationPage() {
 
             {/* 본문 */}
             {body && (
-              <div className="text-amber-800 text-sm leading-relaxed whitespace-pre-line max-h-72 overflow-y-auto">
+              <div className="text-amber-800 text-base leading-[1.9] whitespace-pre-line max-h-[75vh] overflow-y-auto meditation-body">
                 {body}
               </div>
             )}
 
             {/* 언어 토글 */}
-            <div className="mt-4 flex justify-center">
+            <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setShowKorean((v) => !v)}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-amber-200 text-xs text-amber-600 hover:bg-amber-50 transition"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-amber-200 text-xs text-amber-600 hover:bg-amber-50 transition font-sans"
               >
                 <span>{showKorean ? "🇺🇸" : "🇰🇷"}</span>
                 <span>{showKorean ? "원문 보기" : "번역 보기"}</span>
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
 

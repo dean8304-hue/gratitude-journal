@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [bio, setBio] = useState(profile?.bio || "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
 
   useEffect(() => {
     if (profile) {
@@ -73,6 +74,26 @@ export default function SettingsPage() {
     a.download = `gratitude-journal-${format(new Date(), "yyyyMMdd")}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: "감사일기",
+      text: "매일 감사를 기록하고 함께 나누는 앱, 감사일기에 초대합니다!",
+      url: window.location.origin,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.origin);
+        setShareMessage("링크가 복사되었습니다! 친구에게 공유해보세요 📋");
+        setTimeout(() => setShareMessage(""), 3000);
+      }
+    } catch {
+      // 사용자가 공유를 취소한 경우 무시
+    }
   };
 
   const handleLogout = async () => {
@@ -163,6 +184,39 @@ export default function SettingsPage() {
         >
           데이터 내보내기 (JSON)
         </button>
+      </div>
+
+      {/* 앱 공유하기 */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-amber-100">
+        <h2 className="text-lg font-bold text-amber-900 mb-4">앱 공유하기</h2>
+        <button
+          onClick={handleShare}
+          className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-semibold rounded-xl transition flex items-center justify-center gap-2 shadow-md"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          친구에게 감사일기 공유하기
+        </button>
+        {shareMessage && (
+          <p className="text-sm text-green-600 text-center mt-3">
+            {shareMessage}
+          </p>
+        )}
       </div>
 
       {/* 로그아웃 */}

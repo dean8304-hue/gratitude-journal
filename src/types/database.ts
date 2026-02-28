@@ -199,6 +199,60 @@ export interface Database {
           }
         ];
       };
+      meetings: {
+        Row: {
+          id: string;
+          name: string;
+          day_of_week: string | null;
+          time: string | null;
+          location_name: string | null;
+          address: string | null;
+          contact_name: string | null;
+          contact_phone: string | null;
+          description: string | null;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          day_of_week?: string | null;
+          time?: string | null;
+          location_name?: string | null;
+          address?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          description?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          day_of_week?: string | null;
+          time?: string | null;
+          location_name?: string | null;
+          address?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          description?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "meetings_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -221,6 +275,7 @@ export type GratitudeEntry = Database["public"]["Tables"]["gratitude_entries"]["
 export type MeditationReflection = Database["public"]["Tables"]["meditation_reflections"]["Row"];
 export type Reaction = Database["public"]["Tables"]["reactions"]["Row"];
 export type Comment = Database["public"]["Tables"]["comments"]["Row"];
+export type Meeting = Database["public"]["Tables"]["meetings"]["Row"];
 
 export type ReactionType = "like" | "cheer" | "pray" | "heart";
 

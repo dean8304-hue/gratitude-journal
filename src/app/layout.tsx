@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 import UpdateBanner from "@/components/common/UpdateBanner";
 
@@ -11,6 +12,13 @@ const pretendard = localFont({
     },
   ],
   variable: "--font-pretendard",
+  display: "swap",
+});
+
+const notoSerifKR = Noto_Serif_KR({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-noto-serif-kr",
   display: "swap",
 });
 
@@ -66,7 +74,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className={`${pretendard.variable} font-sans antialiased`}>
+      <body className={`${pretendard.variable} ${notoSerifKR.variable} font-sans antialiased`}>
         <UpdateBanner />
         {children}
       </body>

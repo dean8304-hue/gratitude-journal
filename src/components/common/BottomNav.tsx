@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 
 const tabs = [
   { href: "/journal", label: "감사목록", icon: "📝" },
-  { href: "/meditation", label: "오늘의 명상", icon: "🧘" },
+  { href: "/meditation", label: "명상", icon: "🧘" },
   { href: "/community", label: "커뮤니티", icon: "👥" },
+  { href: "/meetings", label: "모임안내", icon: "📋" },
 ];
 
 export default function BottomNav() {
@@ -29,7 +30,7 @@ export default function BottomNav() {
             >
               <span className="text-xl">{tab.icon}</span>
               <span
-                className={`text-xs mt-0.5 ${
+                className={`text-[10px] mt-0.5 ${
                   isActive ? "font-semibold" : ""
                 }`}
               >

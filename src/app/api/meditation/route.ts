@@ -7,6 +7,27 @@ import os from "os";
 // 인메모리 캐시 (프로세스 내)
 const memCache: Record<string, MeditationResponse> = {};
 
+// KST(한국시간) 기준 오전 6시를 기점으로 날짜 키를 계산
+// - 06:00 이후 → 오늘 날짜 키 (새 크롤링)
+// - 06:00 이전 → 어제 날짜 키 (어제 캐시 사용)
+function getKSTDateKey(): string {
+  const now = new Date();
+  // UTC 기준 현재 시간에 +9시간(KST)
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
+  const kst = new Date(kstMs);
+
+  const kstHour = kst.getUTCHours();
+  // KST 오전 6시 이전이면 전날 날짜 사용
+  if (kstHour < 6) {
+    kst.setUTCDate(kst.getUTCDate() - 1);
+  }
+
+  const yyyy = kst.getUTCFullYear();
+  const mm = String(kst.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(kst.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 // 파일 캐시 경로 (서버 재시작해도 유지)
 const CACHE_DIR = path.join(os.tmpdir(), "gratitude-journal-cache");
 function getCacheFilePath(date: string) {
@@ -119,7 +140,8 @@ async function translateText(text: string): Promise<string> {
 }
 
 export async function GET() {
-  const today = new Date().toISOString().split("T")[0];
+  // KST 오전 6시 기준 날짜 키 (서버 타임존 무관)
+  const today = getKSTDateKey();
 
   // 1) 인메모리 캐시
   if (memCache[today]) return NextResponse.json(memCache[today]);

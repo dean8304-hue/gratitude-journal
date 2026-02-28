@@ -37,6 +37,15 @@ html {
   border-radius: 2px;
 }
 
+/* 명상글 본문 문단 간격 */
+.meditation-body {
+  word-break: keep-all;
+}
+.meditation-body br,
+.meditation-body p {
+  margin-bottom: 1.5em;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

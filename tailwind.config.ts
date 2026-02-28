@@ -51,6 +51,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-pretendard)", "Pretendard", "-apple-system", "BlinkMacSystemFont", "system-ui", "sans-serif"],
+        serif: ["var(--font-noto-serif-kr)", "Noto Serif KR", "Georgia", "Noto Serif", "serif"],
       },
     },
   },
