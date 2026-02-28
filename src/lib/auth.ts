@@ -28,6 +28,9 @@ export async function signInWithOAuth(provider: Provider) {
     provider,
     options: {
       redirectTo: `${window.location.origin}/auth/callback`,
+      ...(provider === "kakao" && {
+        scopes: "profile_nickname profile_image",
+      }),
     },
   });
 }
